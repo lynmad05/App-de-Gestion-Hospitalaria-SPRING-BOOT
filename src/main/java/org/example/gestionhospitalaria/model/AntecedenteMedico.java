@@ -1,5 +1,5 @@
 package org.example.gestionhospitalaria.model;
-
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -14,6 +14,7 @@ public class AntecedenteMedico {
 
     @ManyToOne
     @JoinColumn(name = "id_historia", nullable = false)
+    @JsonBackReference
     private HistoriaClinica historiaClinica;
 
     @Column(length = 50, nullable = false)

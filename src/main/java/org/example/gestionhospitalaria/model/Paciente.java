@@ -1,4 +1,5 @@
 package org.example.gestionhospitalaria.model;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.*;
 import lombok.Data;
@@ -42,5 +43,6 @@ public class Paciente {
 
 
     @OneToOne(mappedBy = "paciente", cascade = CascadeType.ALL)
+    @JsonManagedReference
     private HistoriaClinica historiaClinica;
 }
