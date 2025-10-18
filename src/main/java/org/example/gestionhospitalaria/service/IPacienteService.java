@@ -15,4 +15,7 @@ public interface IPacienteService {
     Paciente actualizarPaciente(Long id, Paciente pacienteActualizado);
 
     void desactivarPaciente(Long id);
+
+
+    List<Paciente> buscarPacientes(String termino);
 }

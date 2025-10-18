@@ -48,6 +48,10 @@ public class PacienteServiceImpl implements IPacienteService {
             pacienteExistente.setDireccion(pacienteActualizado.getDireccion());
             pacienteExistente.setTelefono(pacienteActualizado.getTelefono());
             pacienteExistente.setCorreo(pacienteActualizado.getCorreo());
+            // Make sure sexo is updated if it's part of the form
+            if (pacienteActualizado.getSexo() != null) {
+                pacienteExistente.setSexo(pacienteActualizado.getSexo());
+            }
             return pacienteRepository.save(pacienteExistente);
         }).orElseThrow(() -> new RuntimeException("Paciente no encontrado con el ID: " + id));
     }
@@ -59,4 +63,14 @@ public class PacienteServiceImpl implements IPacienteService {
         paciente.setEstado("Inactivo");
         pacienteRepository.save(paciente);
     }
+
+    // --- CORRECTED SEARCH METHOD ---
+    @Override
+    public List<Paciente> buscarPacientes(String termino) {
+        // Moved the correct logic here
+        return pacienteRepository.findByDniContainingIgnoreCaseOrNombresContainingIgnoreCase(termino, termino);
+    }
+
+
+
 }

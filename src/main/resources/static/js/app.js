@@ -150,46 +150,130 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
     }
 
-    // --- MÓDULO PACIENTES ---
+    // --- MÓDULO PACIENTES (REFACTORIZADO CON BÚSQUEDA) ---
     async function loadPacientes() {
-        try {
-            const pacientes = await fetchData('/pacientes');
-            mainContent.innerHTML = `
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2>Gestión de Pacientes</h2>
-                    <button class="btn btn-primary" id="btn-add-paciente"><i class="bi bi-plus-circle"></i> Registrar Paciente</button>
-                </div>
-                <table class="table table-striped table-hover"><thead><tr><th>ID</th><th>DNI</th><th>Nombre</th><th>Correo</th><th>Estado</th></tr></thead>
-                <tbody>${pacientes.map(p => `<tr><td>${p.idPaciente}</td><td>${p.dni}</td><td>${p.nombres} ${p.apellidos}</td><td>${p.correo}</td><td><span class="badge bg-${p.estado === 'Activo' ? 'success' : 'danger'}">${p.estado}</span></td></tr>`).join('')}</tbody></table>`;
-            document.getElementById('btn-add-paciente').addEventListener('click', showPacienteForm);
-        } catch (error) { mainContent.innerHTML = `<div class="alert alert-danger">${error.message}</div>`; }
+        // 1. Dibuja la estructura estática (título, botón, barra de búsqueda)
+        mainContent.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>Gestión de Pacientes</h2>
+                <button class="btn btn-primary" id="btn-add-paciente"><i class="bi bi-plus-circle"></i> Registrar Paciente</button>
+            </div>
+            
+            <div class="mb-3">
+                <input type="text" id="search-input" class="form-control" placeholder="Buscar por DNI o nombre...">
+            </div>
+            
+            <div id="pacientes-table-container"></div>
+        `;
+
+        // 2. Añade los listeners para los botones
+        document.getElementById('btn-add-paciente').addEventListener('click', () => showPacienteForm(null));
+
+        document.getElementById('search-input').addEventListener('keyup', (e) => {
+            const termino = e.target.value;
+            // Llama a la función que dibuja la tabla con el término de búsqueda
+            renderPacientesTable(termino);
+        });
+
+        // 3. Carga la tabla por primera vez (sin filtro)
+        renderPacientesTable(null);
     }
 
-    function showPacienteForm() {
-        modalTitle.textContent = 'Registrar Nuevo Paciente';
+    // ¡NUEVA FUNCIÓN! Se encarga solo de buscar y dibujar la tabla de pacientes
+    async function renderPacientesTable(termino) {
+        try {
+            let endpoint = '/pacientes';
+            if (termino && termino.trim() !== '') {
+                endpoint = `/pacientes/buscar?termino=${termino}`;
+            }
+
+            const pacientes = await fetchData(endpoint);
+            const container = document.getElementById('pacientes-table-container');
+
+            if (pacientes.length === 0) {
+                container.innerHTML = '<div class="alert alert-info">No se encontraron pacientes.</div>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table class="table table-striped table-hover">
+                    <thead><tr><th>ID</th><th>DNI</th><th>Nombre</th><th>Correo</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        ${pacientes.map(p => `
+                            <tr>
+                                <td>${p.idPaciente}</td>
+                                <td>${p.dni}</td>
+                                <td>${p.nombres} ${p.apellidos}</td>
+                                <td>${p.correo}</td>
+                                <td><span class="badge bg-${p.estado === 'Activo' ? 'success' : 'danger'}">${p.estado}</span></td>
+                            </tr>`).join('')}
+                    </tbody>
+                </table>
+            `;
+        } catch (error) {
+            document.getElementById('pacientes-table-container').innerHTML = `<div class="alert alert-danger">${error.message}</div>`;
+        }
+    }
+
+    // Formulario de Paciente (Crear y Editar)
+    async function showPacienteForm(pacienteId) {
+        const isEditing = pacienteId !== null;
+        modalTitle.textContent = isEditing ? 'Editar Paciente' : 'Registrar Nuevo Paciente';
+
+        let pacienteToEdit = null;
+        if (isEditing) {
+            try {
+                pacienteToEdit = await fetchData(`/pacientes/${pacienteId}`); // Necesitarás crear este endpoint
+            } catch (error) {
+                alert('Error al cargar datos del paciente.');
+                return;
+            }
+        }
+
         modalBody.innerHTML = `
             <form id="paciente-form">
                 <div class="row">
-                    <div class="col-md-6 mb-3"><label for="dni" class="form-label">DNI</label><input type="text" class="form-control" id="dni" required></div>
-                    <div class="col-md-6 mb-3"><label for="fechaNacimiento" class="form-label">Fecha de Nacimiento</label><input type="date" class="form-control" id="fechaNacimiento" required></div>
+                    <div class="col-md-6 mb-3"><label for="dni" class="form-label">DNI</label>
+                        <input type="text" class="form-control" id="dni" required value="${isEditing ? pacienteToEdit.dni : ''}">
+                    </div>
+                    <div class="col-md-6 mb-3"><label for="fechaNacimiento" class="form-label">Fecha de Nacimiento</label>
+                        <input type="date" class="form-control" id="fechaNacimiento" required value="${isEditing ? pacienteToEdit.fechaNacimiento : ''}">
+                    </div>
                 </div>
                  <div class="row">
-                    <div class="col-md-6 mb-3"><label for="nombres" class="form-label">Nombres</label><input type="text" class="form-control" id="nombres" required></div>
-                    <div class="col-md-6 mb-3"><label for="apellidos" class="form-label">Apellidos</label><input type="text" class="form-control" id="apellidos" required></div>
+                    <div class="col-md-6 mb-3"><label for="nombres" class="form-label">Nombres</label>
+                        <input type="text" class="form-control" id="nombres" required value="${isEditing ? pacienteToEdit.nombres : ''}">
+                    </div>
+                    <div class="col-md-6 mb-3"><label for="apellidos" class="form-label">Apellidos</label>
+                        <input type="text" class="form-control" id="apellidos" required value="${isEditing ? pacienteToEdit.apellidos : ''}">
+                    </div>
                 </div>
                  <div class="row">
-                    <div class="col-md-6 mb-3"><label for="correo" class="form-label">Correo Electrónico</label><input type="email" class="form-control" id="correo" required></div>
-                     <div class="col-md-6 mb-3"><label for="telefono" class="form-label">Teléfono</label><input type="text" class="form-control" id="telefono"></div>
+                    <div class="col-md-6 mb-3"><label for="correo" class="form-label">Correo Electrónico</label>
+                        <input type="email" class="form-control" id="correo" required value="${isEditing ? pacienteToEdit.correo : ''}">
+                    </div>
+                     <div class="col-md-6 mb-3"><label for="telefono" class="form-label">Teléfono</label>
+                        <input type="text" class="form-control" id="telefono" value="${isEditing ? pacienteToEdit.telefono : ''}">
+                    </div>
                 </div>
-                 <div class="mb-3"><label for="direccion" class="form-label">Dirección</label><input type="text" class="form-control" id="direccion"></div>
-                 <div class="mb-3"><label for="sexo" class="form-label">Sexo</label><select class="form-select" id="sexo"><option value="Masculino">Masculino</option><option value="Femenino">Femenino</option><option value="Otro">Otro</option></select></div>
+                 <div class="mb-3"><label for="direccion" class="form-label">Dirección</label>
+                    <input type="text" class="form-control" id="direccion" value="${isEditing ? pacienteToEdit.direccion : ''}">
+                 </div>
+                 <div class="mb-3"><label for="sexo" class="form-label">Sexo</label>
+                    <select class="form-select" id="sexo">
+                        <option value="Masculino" ${isEditing && pacienteToEdit.sexo === 'Masculino' ? 'selected' : ''}>Masculino</option>
+                        <option value="Femenino" ${isEditing && pacienteToEdit.sexo === 'Femenino' ? 'selected' : ''}>Femenino</option>
+                        <option value="Otro" ${isEditing && pacienteToEdit.sexo === 'Otro' ? 'selected' : ''}>Otro</option>
+                    </select>
+                 </div>
                 <div class="d-flex justify-content-end">
                     <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Paciente</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
                 </div>
             </form>
         `;
         formModal.show();
+
         document.getElementById('paciente-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const data = {
@@ -201,12 +285,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 direccion: document.getElementById('direccion').value,
                 telefono: document.getElementById('telefono').value,
                 correo: document.getElementById('correo').value
+                // El estado se maneja en el backend
             };
+
             try {
-                await postData('/pacientes', data);
+                if (isEditing) {
+                    await putData(`/pacientes/${pacienteId}`, data); // Necesitarás este endpoint
+                } else {
+                    await postData('/pacientes', data);
+                }
                 formModal.hide();
                 loadPacientes();
-                alert('¡Paciente registrado con éxito!');
+                alert(isEditing ? '¡Paciente actualizado!' : '¡Paciente registrado!');
             } catch (error) { alert(error.message); }
         });
     }
@@ -230,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { mainContent.innerHTML = `<div class="alert alert-danger">${error.message}</div>`; }
     }
 
-    // --- MÓDULO CITAS (¡CORREGIDO!) ---
+    // --- MÓDULO CITAS (COMPLETO: C-R-U-D) ---
     async function loadCitas() {
         try {
             const citas = await fetchData('/citas');
@@ -259,6 +349,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     </tbody>
                 </table>`;
 
+            // Conectamos Botón Cancelar
             document.querySelectorAll('.btn-cancelar').forEach(btn => {
                 btn.addEventListener('click', async (e) => {
                     const id = e.currentTarget.dataset.id;
@@ -271,68 +362,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
+            // Conectamos Botón Reprogramar
             document.querySelectorAll('.btn-reprogramar').forEach(btn => {
-                btn.addEventListener('click', () => alert('Funcionalidad de reprogramar aún no implementada.'));
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    showCitaForm(id); // Llama al formulario en modo "edición"
+                });
             });
 
-            // ¡ESTA LÍNEA ES LA CORRECCIÓN!
-            document.getElementById('btn-add-cita').addEventListener('click', showCitaForm);
+            // Conectamos Botón Agendar Cita
+            document.getElementById('btn-add-cita').addEventListener('click', () => {
+                showCitaForm(null); // Llama al formulario en modo "creación"
+            });
+
         } catch (error) { mainContent.innerHTML = `<div class="alert alert-danger">${error.message}</div>`; }
     }
 
-    // ¡NUEVA FUNCIÓN PARA EL FORMULARIO DE CITAS!
-    async function showCitaForm() {
-        modalTitle.textContent = 'Agendar Nueva Cita';
+    // Formulario de Cita (Crear y Editar)
+    async function showCitaForm(citaId) {
+        const isEditing = citaId !== null;
+        modalTitle.textContent = isEditing ? 'Reprogramar Cita' : 'Agendar Nueva Cita';
+
         try {
-            // Obtenemos pacientes y médicos para los dropdowns
+            // 1. Carga los datos necesarios para los dropdowns
             const [pacientes, medicos] = await Promise.all([
                 fetchData('/pacientes'),
                 fetchData('/medicos')
             ]);
 
+            // 2. Si estamos editando, busca los datos de esa cita específica
+            const citaToEdit = isEditing ? await fetchData(`/citas/${citaId}`) : null;
+
+            // 3. Construye el HTML del formulario
             modalBody.innerHTML = `
                 <form id="cita-form">
                     <div class="mb-3">
                         <label for="paciente" class="form-label">Paciente</label>
-                        <select class="form-select" id="paciente" required>
+                        <select class="form-select" id="paciente" required ${isEditing ? 'disabled' : ''}>
                             <option value="">Seleccione un paciente...</option>
-                            ${pacientes.map(p => `<option value="${p.idPaciente}">${p.nombres} ${p.apellidos}</option>`).join('')}
+                            ${pacientes.map(p => `<option value="${p.idPaciente}" 
+                                ${isEditing && p.idPaciente === citaToEdit.paciente.idPaciente ? 'selected' : ''}>
+                                ${p.nombres} ${p.apellidos}
+                            </option>`).join('')}
                         </select>
+                        ${isEditing ? '<small class="form-text">No se puede cambiar el paciente de una cita.</small>' : ''}
                     </div>
                     <div class="mb-3">
                         <label for="medico" class="form-label">Médico</label>
                         <select class="form-select" id="medico" required>
                             <option value="">Seleccione un médico...</option>
-                            ${medicos.map(m => `<option value="${m.idMedico}">${m.nombres} ${m.apellidos} (${m.especialidades.map(e => e.nombre).join(', ')})</option>`).join('')}
+                            ${medicos.map(m => `<option value="${m.idMedico}" 
+                                ${isEditing && m.idMedico === citaToEdit.medico.idMedico ? 'selected' : ''}>
+                                ${m.nombres} ${m.apellidos} (${m.especialidades.map(e => e.nombre).join(', ')})
+                            </option>`).join('')}
                         </select>
                     </div>
                     <div class="row">
-                        <div class="col-md-6 mb-3"><label for="fecha" class="form-label">Fecha</label><input type="date" class="form-control" id="fecha" required></div>
-                        <div class="col-md-6 mb-3"><label for="hora" class="form-label">Hora</label><input type="time" class="form-control" id="hora" required></div>
+                        <div class="col-md-6 mb-3"><label for="fecha" class="form-label">Fecha</label>
+                            <input type="date" class="form-control" id="fecha" required 
+                                   value="${isEditing ? citaToEdit.fecha : ''}">
+                        </div>
+                        <div class="col-md-6 mb-3"><label for="hora" class="form-label">Hora</label>
+                            <input type="time" class="form-control" id="hora" required 
+                                   value="${isEditing ? citaToEdit.hora : ''}">
+                        </div>
                     </div>
-                    <div class="mb-3"><label for="motivo" class="form-label">Motivo de la Cita</label><textarea class="form-control" id="motivo" rows="3" required></textarea></div>
+                    <div class="mb-3"><label for="motivo" class="form-label">Motivo de la Cita</label>
+                        <textarea class="form-control" id="motivo" rows="3" required>${isEditing ? citaToEdit.motivo : ''}</textarea>
+                    </div>
                     <div class="d-flex justify-content-end">
                         <button type="button" class="btn btn-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Agendar Cita</button>
+                        <button type="submit" class="btn btn-primary">${isEditing ? 'Reprogramar' : 'Agendar'}</button>
                     </div>
                 </form>
             `;
             formModal.show();
 
+            // 4. Añade el listener de envío
             document.getElementById('cita-form').addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const data = {
-                    paciente: { idPaciente: document.getElementById('paciente').value },
+                    paciente: { idPaciente: isEditing ? citaToEdit.paciente.idPaciente : document.getElementById('paciente').value },
                     medico: { idMedico: document.getElementById('medico').value },
                     fecha: document.getElementById('fecha').value,
                     hora: document.getElementById('hora').value,
                     motivo: document.getElementById('motivo').value
                 };
+
                 try {
-                    await postData('/citas', data);
+                    if (isEditing) {
+                        await putData(`/citas/${citaId}`, data); // Llama a PUT
+                    } else {
+                        await postData('/citas', data); // Llama a POST
+                    }
                     formModal.hide();
                     loadCitas();
-                    alert('¡Cita agendada con éxito!');
+                    alert(isEditing ? '¡Cita reprogramada con éxito!' : '¡Cita agendada con éxito!');
                 } catch (error) { alert(error.message); }
             });
 
@@ -350,7 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- MÓDULO HOSPITALIZACIÓN ---
+    // --- MÓDULOS HOSPITALIZACIÓN, FACTURAS, USUARIOS, BITÁCORA ---
     async function loadHospitalizacion() {
         try {
             const [hospitalizaciones, habitaciones] = await Promise.all([fetchData('/hospitalizaciones'), fetchData('/habitaciones')]);
@@ -369,7 +494,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { mainContent.innerHTML = `<div class="alert alert-danger">${error.message}</div>`; }
     }
 
-    // --- MÓDULO FACTURAS ---
     async function loadFacturas() {
         try {
             const facturas = await fetchData('/facturas');
@@ -380,7 +504,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { mainContent.innerHTML = `<div class="alert alert-danger">${error.message}</div>`; }
     }
 
-    // --- MÓDULO USUARIOS ---
     async function loadUsuarios() {
         try {
             const usuarios = await fetchData('/usuarios');
@@ -391,7 +514,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) { mainContent.innerHTML = `<div class="alert alert-danger">${error.message}</div>`; }
     }
 
-    // --- MÓDULO BITÁCORA ---
     async function loadBitacora() {
         try {
             const registros = await fetchData('/bitacora');

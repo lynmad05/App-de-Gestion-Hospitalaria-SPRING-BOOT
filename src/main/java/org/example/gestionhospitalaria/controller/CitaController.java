@@ -75,4 +75,11 @@ public class CitaController {
         Cita citaCancelada = citaRepository.save(cita);
         return ResponseEntity.ok(citaCancelada);
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Cita> getCitaPorId(@PathVariable Long id) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+        return ResponseEntity.ok(cita);
+    }
 }
