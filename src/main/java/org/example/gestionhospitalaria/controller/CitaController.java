@@ -53,4 +53,26 @@ public class CitaController {
         List<Cita> citas = citaRepository.findAll();
         return new ResponseEntity<>(citas, HttpStatus.OK);
     }
+    @PutMapping("/{id}")
+    public ResponseEntity<Cita> reprogramarCita(@PathVariable Long id, @RequestBody Cita citaDetails) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+        cita.setFecha(citaDetails.getFecha());
+        cita.setHora(citaDetails.getHora());
+        cita.setMotivo(citaDetails.getMotivo());
+        cita.setEstado("Programada");
+
+        Cita citaActualizada = citaRepository.save(cita);
+        return ResponseEntity.ok(citaActualizada);
+    }
+
+    @PutMapping("/{id}/cancelar")
+    public ResponseEntity<Cita> cancelarCita(@PathVariable Long id) {
+        Cita cita = citaRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cita no encontrada"));
+
+        cita.setEstado("Cancelada");
+        Cita citaCancelada = citaRepository.save(cita);
+        return ResponseEntity.ok(citaCancelada);
+    }
 }

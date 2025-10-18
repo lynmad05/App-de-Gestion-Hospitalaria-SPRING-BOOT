@@ -1,0 +1,121 @@
+/*
+ * Archivo: custom.css
+ * Estilos para el nuevo layout con Sidebar
+ */
+
+/* 1. Un fondo de página más suave que el blanco puro de Minty */
+body {
+    background-color: #f9fbfd;
+}
+
+/* --- LAYOUT PRINCIPAL CON SIDEBAR --- */
+
+#app-container {
+    display: none; /* Se mostrará con JS */
+    min-height: 100vh; /* Ocupa toda la altura */
+}
+
+/* 2. El Sidebar (la barra lateral izquierda) */
+#sidebar {
+    width: 280px; /* Ancho del sidebar */
+    background-color: var(--bs-primary); /* Usa el color primario de Minty */
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: width 0.3s ease; /* (Para futuras animaciones) */
+}
+
+#sidebar .navbar-brand {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+#sidebar hr {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* 3. Los enlaces del Sidebar */
+#sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.85); /* Texto del enlace */
+    font-size: 1rem;
+    padding: 0.8rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 0.25rem;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#sidebar .nav-link .bi {
+    margin-right: 12px; /* Espacio entre icono y texto */
+    font-size: 1.25rem;
+    vertical-align: middle;
+}
+
+/* 4. Efecto Hover y Activo en los enlaces */
+#sidebar .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+#sidebar .nav-link.active {
+    background-color: #ffffff; /* Fondo blanco para el activo */
+    color: var(--bs-primary); /* Texto en color Minty */
+    font-weight: 500;
+}
+
+#sidebar #btn-logout {
+    font-weight: 500;
+}
+
+/* 5. El contenedor del contenido (main + footer) */
+#content-wrapper {
+    background-color: #f9fbfd; /* El fondo gris claro */
+    width: calc(100% - 280px); /* Ocupa el resto del ancho */
+    min-height: 100vh;
+}
+
+/* 6. El Footer (Tu pie de página) */
+.footer {
+    background-color: #ffffff;
+    border-top: 1px solid #e9ecef; /* Borde superior sutil */
+    padding: 1.25rem 0;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.footer .text-muted {
+    color: #6c757d !important;
+}
+
+
+/* --- ESTILOS DE LA PÁGINA DE INICIO (los que ya tenías) --- */
+
+.jumbotron {
+    background-image: linear-gradient(120deg, #fdfbfb 0%, #ebedee 100%);
+    border-radius: 1rem;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+    border: 1px solid #ffffff;
+    padding: 3rem 2.5rem;
+}
+
+.jumbotron .display-4 {
+    color: #333;
+    font-weight: 600;
+}
+
+.card {
+    border-radius: 0.75rem;
+    border: none;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
+}
+
+.card .bi {
+    font-size: 3.5rem;
+    margin-bottom: 1rem;
+    display: inline-block;
+    background: linear-gradient(45deg, var(--bs-primary), var(--bs-info));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}

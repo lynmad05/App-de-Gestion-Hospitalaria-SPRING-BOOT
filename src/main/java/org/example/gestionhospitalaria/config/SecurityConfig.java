@@ -23,9 +23,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // --- ¡LA CORRECCIÓN EMPIEZA AQUÍ! ---
-    // Ya no inyectamos nada en el constructor.
-    // Los beans se conectarán a través de los parámetros de los métodos.
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -61,19 +58,35 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthFilter, AuthenticationProvider authenticationProvider) throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                .csrf(csrf -> csrf.disable()) // Desactiva CSRF para APIs REST
                 .authorizeHttpRequests(auth -> auth
-                        // Aquí van todas tus reglas de .requestMatchers(...)
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/usuarios").permitAll()
+                        // 1. RUTAS PÚBLICAS (No requieren login)
                         .requestMatchers("/", "/index.html", "/js/**", "/css/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/v1/**").permitAll() // Hacemos GET público por simplicidad de momento
-                        // Aquí irían tus reglas más específicas por rol si las necesitas
+                        .requestMatchers("/api/v1/auth/**").permitAll() // Login
+                        .requestMatchers(HttpMethod.POST, "/api/v1/usuarios").permitAll() // Creación de usuario (para registrar el primero)
+
+                        // 2. RUTAS PROTEGIDAS POR ROL (Requieren login y un rol específico)
+
+                        // Gestión de Pacientes
+                        .requestMatchers(HttpMethod.POST, "/api/v1/pacientes").hasAnyRole("ADMIN", "RECEPCIONISTA")
+
+                        // Gestión de Citas (¡AQUÍ ESTÁ LA ACTUALIZACIÓN!)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/citas").hasAnyRole("ADMIN", "RECEPCIONISTA", "MEDICO")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/citas/**").hasAnyRole("ADMIN", "RECEPCIONISTA", "MEDICO") // <-- ¡NUEVA LÍNEA!
+
+                        // Gestión de Consultas
+                        .requestMatchers("/api/v1/consultas/**").hasRole("MEDICO")
+
+                        // Administración y Seguridad
+                        .requestMatchers("/api/v1/bitacora/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/usuarios/**").hasRole("ADMIN") // (GET, PUT, DELETE de usuarios)
+
+                        // 3. RUTAS AUTENTICADAS (Cualquier otra ruta requiere solo estar logueado)
                         .anyRequest().authenticated()
                 )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authenticationProvider(authenticationProvider) // Conectamos el provider
-                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class); // Conectamos el filtro
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Usa sesiones sin estado (JWT)
+                .authenticationProvider(authenticationProvider) // Define el proveedor de autenticación
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class); // Añade el filtro JWT
 
         return http.build();
     }
